@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receipt - GPS Toll Collection</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto py-8 px-4">
+        <div class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
+            <div class="text-center mb-6">
+                <h1 class="text-2xl font-bold text-blue-600">GPS Toll Collection</h1>
+                <p class="text-gray-600">Official Receipt</p>
+            </div>
+            
+            <div class="border-b pb-4 mb-4">
+                <div class="flex justify-between mb-2">
+                    <span class="text-gray-600">Transaction ID:</span>
+                    <span class="font-medium">#{{ transaction.id }}</span>
+                </div>
+                <div class="flex justify-between mb-2">
+                    <span class="text-gray-600">Date:</span>
+                    <span class="font-medium">{{ transaction.timestamp }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Vehicle:</span>
+                    <span class="font-medium">{{ transaction.vehicle_type }} ({{ transaction.vehicle_id }})</span>
+                </div>
+            </div>
+            
+            <div class="mb-6">
+                <h2 class="text-lg font-semibold mb-2">Journey Details</h2>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <div class="flex justify-between mb-2">
+                        <span class="text-gray-600">Distance Traveled:</span>
+                        <span class="font-medium">{{ transaction.distance }} km</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="border-t pt-4">
+                <div class="flex justify-between mb-2">
+                    <span class="text-gray-600">Toll Amount:</span>
+                    <span class="font-medium">₹{{ "%.2f"|format(transaction.toll) }}</span>
+                </div>
+                <div class="flex justify-between mb-2">
+                    <span class="text-gray-600">Fine Amount:</span>
+                    <span class="font-medium">₹{{ "%.2f"|format(transaction.fine) }}</span>
+                </div>
+                <div class="flex justify-between text-lg font-bold mt-4 pt-2 border-t">
+                    <span>Total Amount:</span>
+                    <span>₹{{ "%.2f"|format(transaction.toll + transaction.fine) }}</span>
+                </div>
+            </div>
+            
+            <div class="mt-6 text-center text-sm text-gray-500">
+                <p>Thank you for using GPS Toll Collection</p>
+                <p class="mt-2">This is an official receipt for your records</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

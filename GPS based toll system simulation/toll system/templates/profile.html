@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+        .card-hover {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .info-label {
+            @apply text-gray-500 text-sm font-medium;
+        }
+        .info-value {
+            @apply text-gray-800 text-lg;
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Header Section -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+            <div class="mb-4 md:mb-0">
+                <h1 class="text-3xl font-bold text-gray-800">My Profile</h1>
+                <p class="text-gray-600">Manage your account and vehicle information</p>
+            </div>
+            <a href="{{ url_for('dashboard') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg shadow-md transition duration-300 flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Dashboard
+            </a>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-4 p-4 rounded-lg {% if category == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Account Information Card -->
+        <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8 card-hover">
+            <div class="p-6">
+                <div class="flex items-center mb-4">
+                    <div class="bg-indigo-100 p-3 rounded-full mr-4">
+                        <i class="fas fa-user-circle text-indigo-600 text-2xl"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-800">Account Information</h2>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <div>
+                            <p class="info-label">Username</p>
+                            <p class="info-value">{{ username }}</p>
+                        </div>
+                        <div>
+                            <p class="info-label">User ID</p>
+                            <p class="info-value">{{ user['id'] }}</p>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <p class="info-label">Role</p>
+                            <p class="info-value capitalize">{{ user['role'] }}</p>
+                        </div>
+                        <div>
+                            <p class="info-label">Status</p>
+                            <p class="info-value text-green-600">Active</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vehicle Information Card -->
+        <div class="bg-white rounded-xl shadow-md overflow-hidden card-hover">
+            <div class="p-6">
+                <div class="flex items-center mb-4">
+                    <div class="bg-blue-100 p-3 rounded-full mr-4">
+                        <i class="fas fa-car text-blue-600 text-2xl"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-800">Vehicle Information</h2>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <div>
+                            <p class="info-label">Vehicle ID</p>
+                            <p class="info-value font-mono">{{ vehicle['vehicle_id'] }}</p>
+                        </div>
+                        <div>
+                            <p class="info-label">Vehicle Name</p>
+                            <p class="info-value">{{ vehicle['vehicle_name'] }}</p>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <p class="info-label">Vehicle Type</p>
+                            <p class="info-value">{{ vehicle['vehicle_type'] }}</p>
+                        </div>
+                        <div>
+                            <p class="info-label">Last Known Location</p>
+                            <p class="info-value">
+                                {% if vehicle['last_latitude'] is not none and vehicle['last_longitude'] is not none %}
+                                    <span class="font-mono">{{ "%.4f"|format(vehicle['last_latitude']) }}, {{ "%.4f"|format(vehicle['last_longitude']) }}</span>
+                                {% else %}
+                                    <span class="text-gray-400">Not available</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Footer with action buttons -->
+            <div class="bg-gray-50 px-6 py-4 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
+                <a href="{{ url_for('edit_profile') }}" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition text-center">
+                    <i class="fas fa-edit mr-2"></i> Edit Profile
+                </a>
+                <a href="{{ url_for('change_password') }}" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition text-center">
+                    <i class="fas fa-key mr-2"></i> Change Password
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

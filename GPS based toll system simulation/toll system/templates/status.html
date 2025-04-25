@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Status - GPS Based Toll Collection</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .stat-card {
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Navigation Bar -->
+    <nav class="bg-gray-800 p-4 shadow-md">
+        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
+            <div class="text-white text-xl font-bold flex items-center mb-4 md:mb-0">
+                <i class="fas fa-road mr-2 text-blue-300"></i>
+                GPS Toll System
+            </div>
+            <div class="flex flex-wrap justify-center gap-4 md:gap-6">
+                <a href="{{ url_for('status') }}" class="text-white font-semibold hover:text-blue-300 transition duration-200">
+                    <i class="fas fa-chart-line mr-1"></i> Status
+                </a>
+                <a href="{{ url_for('about') }}" class="text-white hover:text-blue-300 transition duration-200">
+                    <i class="fas fa-info-circle mr-1"></i> About
+                </a>
+                <a href="{{ url_for('admin_login') }}" class="text-white hover:text-blue-300 transition duration-200">
+                    <i class="fas fa-user-shield mr-1"></i> Admin
+                </a>
+                {% if 'user_id' not in session %}
+                <a href="{{ url_for('login') }}" class="text-white hover:text-blue-300 transition duration-200">
+                    <i class="fas fa-sign-in-alt mr-1"></i> Login
+                </a>
+                <a href="{{ url_for('signup') }}" class="text-white hover:text-blue-300 transition duration-200">
+                    <i class="fas fa-user-plus mr-1"></i> Sign Up
+                </a>
+                {% else %}
+                <a href="{{ url_for('dashboard') }}" class="text-white hover:text-blue-300 transition duration-200">
+                    <i class="fas fa-tachometer-alt mr-1"></i> Dashboard
+                </a>
+                <a href="{{ url_for('logout') }}" class="text-white hover:text-blue-300 transition duration-200">
+                    <i class="fas fa-sign-out-alt mr-1"></i> Logout
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <header class="bg-blue-600 text-white text-center py-12 shadow-md">
+        <div class="container mx-auto px-4">
+            <h1 class="text-4xl md:text-5xl font-bold mb-4">System Status</h1>
+            <p class="text-lg md:text-xl max-w-2xl mx-auto">
+                Current statistics and operational status of the toll collection system
+            </p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow container mx-auto py-8 px-4">
+        <!-- System Statistics -->
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="stat-card bg-white p-6 rounded-xl shadow-lg border border-blue-100">
+                <div class="flex items-center mb-4">
+                    <div class="bg-blue-100 p-3 rounded-full mr-4">
+                        <i class="fas fa-users text-blue-600 text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800">Registered Users</h3>
+                </div>
+                <p class="text-3xl font-bold text-blue-600">
+                    {{ total_users }}
+                </p>
+            </div>
+            
+            <div class="stat-card bg-white p-6 rounded-xl shadow-lg border border-green-100">
+                <div class="flex items-center mb-4">
+                    <div class="bg-green-100 p-3 rounded-full mr-4">
+                        <i class="fas fa-car text-green-600 text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800">Registered Vehicles</h3>
+                </div>
+                <p class="text-3xl font-bold text-green-600">
+                    {{ total_vehicles }}
+                </p>
+            </div>
+            
+            <div class="stat-card bg-white p-6 rounded-xl shadow-lg border border-purple-100">
+                <div class="flex items-center mb-4">
+                    <div class="bg-purple-100 p-3 rounded-full mr-4">
+                        <i class="fas fa-exchange-alt text-purple-600 text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800">Total Transactions</h3>
+                </div>
+                <p class="text-3xl font-bold text-purple-600">
+                    {{ total_transactions }}
+                </p>
+            </div>
+        </section>
+
+        <!-- System Health -->
+        <section class="bg-white p-6 rounded-xl shadow-lg mb-8">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800 border-b pb-2">System Health</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="text-lg font-semibold mb-3 text-gray-700 flex items-center">
+                        <i class="fas fa-database mr-2 text-blue-500"></i> Database Status
+                    </h3>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div class="flex items-center mb-2">
+                            <div class="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                            <span class="font-medium">Operational</span>
+                        </div>
+                        <p class="text-sm text-gray-600">Last checked: Just now</p>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-semibold mb-3 text-gray-700 flex items-center">
+                        <i class="fas fa-server mr-2 text-blue-500"></i> Server Status
+                    </h3>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div class="flex items-center mb-2">
+                            <div class="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                            <span class="font-medium">Running normally</span>
+                        </div>
+                        <p class="text-sm text-gray-600">Uptime: 99.9%</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Recent Activity -->
+        <section class="bg-white p-6 rounded-xl shadow-lg">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800 border-b pb-2">Recent Activity</h2>
+            
+            <div class="space-y-4">
+                <div class="flex items-start p-4 border-b border-gray-100">
+                    <div class="bg-blue-100 p-2 rounded-full mr-4">
+                        <i class="fas fa-user-plus text-blue-600"></i>
+                    </div>
+                    <div>
+                        <p class="font-medium">New user registration</p>
+                        <p class="text-sm text-gray-500">2 minutes ago</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-start p-4 border-b border-gray-100">
+                    <div class="bg-green-100 p-2 rounded-full mr-4">
+                        <i class="fas fa-car text-green-600"></i>
+                    </div>
+                    <div>
+                        <p class="font-medium">Toll transaction completed</p>
+                        <p class="text-sm text-gray-500">15 minutes ago</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-start p-4">
+                    <div class="bg-purple-100 p-2 rounded-full mr-4">
+                        <i class="fas fa-cog text-purple-600"></i>
+                    </div>
+                    <div>
+                        <p class="font-medium">System maintenance completed</p>
+                        <p class="text-sm text-gray-500">1 hour ago</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-6 mt-8">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0 text-center md:text-left">
+                    <h3 class="text-lg font-semibold">GPS Based Toll Collection</h3>
+                    <p class="text-gray-400 text-sm">Innovating transportation infrastructure</p>
+                </div>
+                <div class="flex space-x-4">
+                    <a href="#" class="text-gray-400 hover:text-white transition duration-200">
+                        <i class="fab fa-twitter text-xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white transition duration-200">
+                        <i class="fab fa-facebook text-xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white transition duration-200">
+                        <i class="fab fa-linkedin text-xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white transition duration-200">
+                        <i class="fas fa-envelope text-xl"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-4 pt-4 text-center text-gray-400 text-sm">
+                <p>© 2025 GPS Based Toll Collection System. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

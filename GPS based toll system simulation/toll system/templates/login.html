@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPS Based Toll Collection - Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .form-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .form-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        .input-field:focus {
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+            border-color: #3b82f6;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+    <!-- Navigation Bar -->
+    <nav class="bg-gray-800 p-4 shadow-lg sticky top-0 z-10">
+        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
+            <div class="text-white text-xl font-bold flex items-center mb-4 md:mb-0">
+                <i class="fas fa-road mr-2 text-blue-300"></i>
+                GPS Toll System
+            </div>
+            <div class="flex flex-wrap justify-center gap-4 md:gap-6">
+                <a href="{{ url_for('status') }}" class="text-white hover:text-blue-300 transition">
+                    <i class="fas fa-chart-line mr-1"></i> Status
+                </a>
+                <a href="{{ url_for('about') }}" class="text-white hover:text-blue-300 transition duration-200">
+                    <i class="fas fa-info-circle mr-1"></i> About
+                </a>
+                <a href="{{ url_for('admin_login') }}" class="text-white hover:text-blue-300 transition duration-200">
+                    <i class="fas fa-user-shield mr-1"></i> Admin
+                </a>
+                <a href="{{ url_for('login') }}" class="text-white font-semibold hover:text-blue-300 transition duration-200">
+                    <i class="fas fa-sign-in-alt mr-1"></i> Login
+                </a>
+                <a href="{{ url_for('signup') }}" class="text-white hover:text-blue-300 transition duration-200">
+                    <i class="fas fa-user-plus mr-1"></i> Sign Up
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow container mx-auto px-4 py-8 flex flex-col items-center">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="w-full max-w-md mb-4 p-4 rounded-lg 
+                        {% if category == 'error' %}bg-red-100 text-red-800
+                        {% elif category == 'success' %}bg-green-100 text-green-800
+                        {% else %}bg-blue-100 text-blue-800{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas 
+                                {% if category == 'error' %}fa-exclamation-circle
+                                {% elif category == 'success' %}fa-check-circle
+                                {% else %}fa-info-circle{% endif %} 
+                                mr-2"></i>
+                            {{ message }}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Header Section -->
+        <header class="gradient-bg text-white text-center py-8 px-6 rounded-xl shadow-lg w-full max-w-4xl mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold mb-4">GPS Based Toll Collection</h1>
+            <p class="text-lg md:text-xl opacity-90">
+                Seamless toll collection based on distance traveled
+            </p>
+        </header>
+
+        <!-- Login Form Section -->
+        <section class="bg-white p-8 rounded-xl shadow-md w-full max-w-md form-card border border-gray-200">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-sign-in-alt text-3xl text-blue-600"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800">Welcome Back</h2>
+                <p class="text-gray-600 mt-2">Sign in to your account</p>
+            </div>
+
+            <form method="POST" action="{{ url_for('login') }}" class="space-y-5">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-user mr-1 text-blue-500"></i> Username
+                    </label>
+                    <input type="text" id="username" name="username" required
+                        class="input-field w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none transition duration-200"
+                        placeholder="Enter your username">
+                </div>
+
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-lock mr-1 text-blue-500"></i> Password
+                    </label>
+                    <div class="relative">
+                        <input type="password" id="password" name="password" required
+                            class="input-field w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none transition duration-200 pr-10"
+                            placeholder="Enter your password">
+                        <button type="button" class="absolute right-3 top-3 text-gray-500 hover:text-gray-700"
+                            onclick="togglePassword()" aria-label="Toggle password visibility">
+                            <i id="toggleIcon" class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" 
+                        class="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-200 flex items-center justify-center">
+                        <i class="fas fa-sign-in-alt mr-2"></i> Login
+                    </button>
+                </div>
+
+                <div class="text-center text-sm text-gray-600 pt-2">
+                    Don't have an account? 
+                    <a href="{{ url_for('signup') }}" class="text-blue-600 hover:text-blue-800 font-medium transition duration-200">
+                        Register now
+                    </a>
+                </div>
+            </form>
+        </section>
+
+        <!-- Information Section -->
+        <section class="mt-8 bg-white p-6 rounded-xl shadow-md w-full max-w-2xl border border-gray-200">
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <h2 class="text-xl font-bold mb-3 text-gray-800 flex items-center">
+                        <i class="fas fa-question-circle mr-2 text-blue-500"></i> What is Toll Tax?
+                    </h2>
+                    <p class="text-gray-700">
+                        Toll tax is a fee charged for using specific roads, bridges, or tunnels. These fees help fund the construction, 
+                        maintenance, and operation of transportation infrastructure, ensuring safe and efficient travel for all users.
+                    </p>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold mb-3 text-gray-800 flex items-center">
+                        <i class="fas fa-check-circle mr-2 text-green-500"></i> Why Pay Toll Tax?
+                    </h2>
+                    <p class="text-gray-700">
+                        Paying tolls directly contributes to better road conditions, reduced traffic congestion, and improved safety. 
+                        Your payments support infrastructure development and help maintain the quality of transportation networks.
+                    </p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-6 mt-8">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0 text-center md:text-left">
+                    <h3 class="text-lg font-semibold">GPS Based Toll Collection</h3>
+                    <p class="text-gray-400 text-sm">Innovating transportation for the future</p>
+                </div>
+                <div class="flex space-x-4">
+                    <a href="#" class="text-gray-400 hover:text-white transition duration-200">
+                        <i class="fab fa-twitter text-xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white transition duration-200">
+                        <i class="fab fa-facebook text-xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white transition duration-200">
+                        <i class="fab fa-linkedin text-xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white transition duration-200">
+                        <i class="fas fa-envelope text-xl"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-4 pt-4 text-center text-gray-400 text-sm">
+                <p>© 2025 GPS Based Toll Collection System. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function togglePassword() {
+            const passwordInput = document.getElementById("password");
+            const toggleIcon = document.getElementById("toggleIcon");
+            
+            if (passwordInput.type === "password") {
+                passwordInput.type = "text";
+                toggleIcon.classList.replace("fa-eye", "fa-eye-slash");
+            } else {
+                passwordInput.type = "password";
+                toggleIcon.classList.replace("fa-eye-slash", "fa-eye");
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Feedback - GPS Based Toll Collection</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .feedback-card {
+            transition: all 0.3s ease;
+        }
+        .feedback-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        #char-count {
+            transition: color 0.2s;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Navigation Bar -->
+    <nav class="bg-gray-800 p-4 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="text-white text-lg font-semibold flex items-center">
+                <i class="fas fa-comments mr-2"></i>
+                GPS Based Toll Collection
+            </div>
+            <div class="space-x-4">
+                <a href="/dashboard" class="text-white hover:text-blue-300 transition">
+                    <i class="fas fa-tachometer-alt mr-1"></i> Dashboard
+                </a>
+                <a href="/profile" class="text-white hover:text-blue-300 transition">
+                    <i class="fas fa-user mr-1"></i> Profile
+                </a>
+                <a href="/logout" class="text-white hover:text-blue-300 transition">
+                    <i class="fas fa-sign-out-alt mr-1"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <header class="bg-blue-600 text-white text-center py-8 shadow-lg">
+        <div class="container mx-auto">
+            <h1 class="text-4xl font-bold mb-2">Share Your Feedback</h1>
+            <p class="text-xl">Your opinion helps us improve our services</p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto py-8 px-4">
+        <!-- Feedback Form -->
+        <section class="bg-white p-6 rounded-lg shadow-md mb-8">
+            <h2 class="text-xl font-bold mb-6 text-gray-800 border-b pb-2">Submit Feedback</h2>
+            
+            <form method="POST" action="/feedback" class="space-y-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                
+                <!-- Feedback Message -->
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="feedback">
+                        Your Feedback <span id="char-count" class="font-normal">(0/500)</span>
+                    </label>
+                    <textarea class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                              id="feedback" name="feedback" rows="5" placeholder="Please share your thoughts about our service..." 
+                              maxlength="500" required></textarea>
+                </div>
+                
+                <!-- Submit Button -->
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition">
+                        <i class="fas fa-paper-plane mr-2"></i> Submit Feedback
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Recent Feedback Section -->
+        <section class="bg-white p-6 rounded-lg shadow-md">
+            <div class="flex justify-between items-center mb-6 border-b pb-2">
+                <h2 class="text-xl font-bold text-gray-800">Recent Feedback</h2>
+                <span class="text-sm text-gray-500">{{ feedbacks|length }} submissions</span>
+            </div>
+            
+            {% if feedbacks %}
+            <div class="space-y-4">
+                {% for feedback in feedbacks %}
+                <div class="feedback-card bg-gray-50 p-5 rounded-lg border border-gray-200">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <span class="font-semibold text-gray-800">{{ session['username'] }}</span>
+                            <span class="mx-2 text-gray-400">•</span>
+                            <span class="text-sm text-gray-500">
+                                {{ feedback['timestamp'].strftime('%b %d, %Y at %I:%M %p') }}
+                            </span>
+                        </div>
+                    </div>
+                    <p class="text-gray-700 whitespace-pre-line">{{ feedback['feedback'] }}</p>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="bg-gray-50 p-8 text-center rounded-lg border border-gray-200">
+                <i class="fas fa-comment-slash text-4xl text-gray-400 mb-4"></i>
+                <p class="text-gray-600">No feedback submissions yet</p>
+                <p class="text-gray-500 text-sm mt-2">Be the first to share your thoughts!</p>
+            </div>
+            {% endif %}
+        </section>
+    </main>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="fixed bottom-4 right-4 space-y-2">
+                {% for category, message in messages %}
+                    <div class="bg-{% if category == 'success' %}green{% else %}red{% endif %}-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center">
+                        <i class="fas fa-{% if category == 'success' %}check-circle{% else %}exclamation-circle{% endif %} mr-2"></i>
+                        <span>{{ message }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- JavaScript -->
+    <script>
+        // Character Counter
+        const messageField = document.getElementById('feedback');
+        const charCount = document.getElementById('char-count');
+        
+        messageField.addEventListener('input', function() {
+            const count = this.value.length;
+            charCount.textContent = `(${count}/500)`;
+            
+            if (count > 450) {
+                charCount.classList.add('text-red-500');
+                charCount.classList.remove('text-gray-500');
+            } else {
+                charCount.classList.remove('text-red-500');
+                charCount.classList.add('text-gray-500');
+            }
+        });
+
+        // Form validation
+        document.querySelector('form').addEventListener('submit', function(e) {
+            if (messageField.value.trim().length < 10) {
+                e.preventDefault();
+                alert('Please provide more detailed feedback (at least 10 characters).');
+                messageField.focus();
+                return;
+            }
+        });
+
+        // Auto-hide flash messages after 5 seconds
+        const flashMessages = document.querySelectorAll('.fixed div');
+        if (flashMessages.length > 0) {
+            setTimeout(() => {
+                flashMessages.forEach(msg => {
+                    msg.style.opacity = '0';
+                    setTimeout(() => msg.remove(), 300);
+                });
+            }, 5000);
+        }
+
+        // Set up CSRF token for AJAX requests
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+        
+        if (csrfToken) {
+            // For jQuery AJAX
+            if (typeof $ !== 'undefined') {
+                $.ajaxSetup({
+                    headers: {
+                        'X-CSRFToken': csrfToken
+                    }
+                });
+            }
+            
+            // For fetch API
+            window.fetchWithCsrf = function(url, options = {}) {
+                options.headers = options.headers || {};
+                options.headers['X-CSRFToken'] = csrfToken;
+                return fetch(url, options);
+            };
+        }
+    </script>
+</body>
+</html>

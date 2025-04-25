@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>User Dashboard - GPS Based Toll Collection</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        /* Map Container Styles */
+#map-container {
+    position: relative;
+    height: 400px;
+    width: 100%;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    margin-bottom: 1rem;
+}
+
+#map {
+    height: 100%;
+    width: 100%;
+    z-index: 0;
+}
+
+/* Leaflet Overrides */
+.leaflet-container {
+    background: #f8fafc;
+    font-family: inherit;
+}
+
+.leaflet-control-attribution {
+    font-size: 11px;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 2px 5px;
+}
+
+.leaflet-popup-content-wrapper {
+    background: #fff;
+    border-radius: 0.5rem;
+    padding: 10px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.leaflet-popup-tip {
+    background: #fff;
+}
+
+.leaflet-popup-content {
+    font-size: 14px;
+    color: #333;
+    margin: 8px 12px;
+}
+
+/* Custom Marker Icons */
+.leaflet-div-icon {
+    background: transparent;
+    border: none;
+}
+
+.leaflet-div-icon i {
+    font-size: 24px;
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+}
+
+.start-marker i {
+    color: #10B981;
+}
+
+.end-marker i {
+    color: #EF4444;
+}
+
+.toll-marker i {
+    color: #F59E0B;
+}
+
+.vehicle-marker i {
+    color: #3B82F6;
+}
+
+/* Loading Spinner */
+#map-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(248, 250, 252, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+/* Map Legend */
+#map-legend {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    z-index: 1000;
+    background: white;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    font-size: 12px;
+}
+
+/* Simulation Controls */
+.simulation-controls {
+    margin-top: 1rem;
+}
+
+.progress-bar {
+    transition: width 0.5s ease;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    #map-container {
+        height: 300px;
+    }
+}
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation Bar -->
+    <nav class="bg-blue-600 p-4 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="text-white text-lg font-semibold flex items-center">
+                <i class="fas fa-map-marked-alt mr-2"></i>
+                GPS Based Toll Collection
+            </div>
+            <div class="space-x-4">
+                <a href="/dashboard" class="text-white hover:text-blue-200 transition">
+                    <i class="fas fa-tachometer-alt mr-1"></i> Dashboard
+                </a>
+                <a href="/profile" class="text-white hover:text-blue-200 transition">
+                    <i class="fas fa-user mr-1"></i> Profile
+                </a>
+                <a href="/feedback" class="text-white hover:text-blue-200 transition">
+                    <i class="fas fa-comment mr-1"></i> Feedback
+                </a>
+                <a href="/logout" class="text-white hover:text-blue-200 transition">
+                    <i class="fas fa-sign-out-alt mr-1"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Dashboard Header -->
+    <header class="bg-blue-700 text-white text-center py-8 shadow-lg">
+        <div class="container mx-auto">
+            <h1 class="text-4xl font-bold mb-2">User Dashboard</h1>
+            <p class="text-xl">Welcome back, {{ username }}! Track your vehicle simulations and payments</p>
+        </div>
+    </header>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="container mx-auto px-4">
+                {% for category, message in messages %}
+                    <div class="flash-message bg-{% if category == 'error' %}red-500{% else %}green-500{% endif %} text-white px-4 py-3 rounded relative mb-4" role="alert">
+                        <span class="block sm:inline">{{ message }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <main class="container mx-auto py-8 px-4">
+        <!-- Vehicle Info Section -->
+        <section class="bg-white p-6 rounded-lg shadow-md mb-8">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-gray-800">Your Vehicles</h2>
+                {% if vehicle %}
+                <form method="POST" action="/start_simulation" id="simulation-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <input type="hidden" name="vehicle_id" value="{{ vehicle.vehicle_id }}"/>
+                    <button type="submit" id="start-simulation-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                        <i class="fas fa-car mr-2"></i> Start Simulation
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% if vehicle %}
+                <div class="vehicle-card bg-blue-50 p-4 rounded-lg border border-blue-100 hover:border-blue-200">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold text-blue-800">{{ vehicle.vehicle_name }}</h3>
+                            <p class="text-sm text-blue-600">{{ vehicle.vehicle_type }}</p>
+                        </div>
+                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                            {{ vehicle.vehicle_id }}
+                        </span>
+                    </div>
+                    <div class="mt-4 grid grid-cols-2 gap-2">
+                        <div>
+                            <p class="text-xs text-gray-500">Total Distance</p>
+                            <p class="font-medium">{{ total_distance|default('0', true) }} km</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500">Tolls Paid</p>
+                            <p class="font-medium">₹{{ total_toll|default('0', true) }}</p>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex space-x-2">
+                        <a href="/map_view" class="text-xs bg-white hover:bg-gray-50 text-gray-800 px-2 py-1 rounded border border-gray-300">
+                            <i class="fas fa-map-marked-alt mr-1"></i> Last Journey 
+                        </a>
+                        <a href="/payment" class="text-xs bg-white hover:bg-gray-50 text-gray-800 px-2 py-1 rounded border border-gray-300">
+                            <i class="fas fa-rupee-sign mr-1"></i> Make Payment
+                        </a>
+                    </div>
+                </div>
+                {% else %}
+                <div class="col-span-3 text-center py-8">
+                    <p class="text-gray-500 mb-4">No vehicle registered yet</p>
+                    <a href="/profile" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg inline-flex items-center">
+                        <i class="fas fa-plus mr-2"></i> Register Vehicle
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- Simulation Section -->
+        <section class="bg-white p-6 rounded-lg shadow-md mb-8 hidden" id="simulation-section">
+            <h2 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2">Current Simulation</h2>
+            
+            <div class="flex flex-col md:flex-row gap-6">
+                <!-- Map Container -->
+                <div class="flex-1">
+                    <div id="map-container" class="relative h-full">
+                        <div id="map" class="h-full w-full rounded-lg overflow-hidden border border-gray-300">
+                            <div id="map-loading" class="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
+                                <div class="text-center">
+                                    <i class="fas fa-spinner fa-spin text-3xl text-blue-500 mb-2"></i>
+                                    <p class="text-gray-600">Loading map...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="map-legend" class="absolute bottom-4 left-4 bg-white p-2 rounded shadow-md text-sm">
+                            <div class="flex items-center mb-1">
+                                <i class="fas fa-flag text-green-500 mr-2"></i> Start Point
+                            </div>
+                            <div class="flex items-center mb-1">
+                                <i class="fas fa-flag-checkered text-red-500 mr-2"></i> Destination
+                            </div>
+                            <div class="flex items-center mb-1">
+                                <i class="fas fa-car text-blue-500 mr-2"></i> Your Vehicle
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-tag text-yellow-500 mr-2"></i> Toll Plaza
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Simulation Controls -->
+                <div class="w-full md:w-80">
+                    <div class="bg-gray-50 p-4 rounded-lg h-full border border-gray-200">
+                        <div class="mb-4">
+                            <h3 class="font-semibold text-gray-700 mb-2">Simulation Details</h3>
+                            <div class="space-y-2">
+                                <p><span class="text-gray-500">Vehicle:</span> <span id="sim-vehicle" class="font-medium">{{ vehicle.vehicle_name if vehicle else '' }}</span></p>
+                                <p><span class="text-gray-500">Route:</span> <span id="sim-route" class="font-medium">Loading...</span></p>
+                                <p><span class="text-gray-500">Distance:</span> <span id="sim-distance" class="font-medium">0 km</span></p>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h3 class="font-semibold text-gray-700 mb-1">Progress</h3>
+                            <div class="w-full bg-gray-200 rounded-full h-4 mb-1">
+                                <div id="simulation-progress" class="bg-blue-600 h-4 rounded-full" style="width: 0%"></div>
+                            </div>
+                            <div class="flex justify-between text-sm text-gray-500">
+                                <span id="progress-text">0% complete</span>
+                                <span id="time-remaining">Calculating...</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4 grid grid-cols-2 gap-2">
+                            <div class="bg-white p-2 rounded text-center border border-gray-200">
+                                <p class="text-xs text-gray-500">Toll Amount</p>
+                                <p id="current-toll" class="font-bold text-lg">₹0.00</p>
+                            </div>
+                            <div class="bg-white p-2 rounded text-center border border-gray-200">
+                                <p class="text-xs text-gray-500">Fine Amount</p>
+                                <p id="current-fine" class="font-bold text-lg">₹0.00</p>
+                            </div>
+                        </div>
+                        
+                        <div class="simulation-controls">
+                            <div class="text-center py-2 text-sm text-gray-500">
+                                Simulation will complete automatically
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Recent Transactions Section -->
+        <section class="bg-white p-6 rounded-lg shadow-md">
+            <div class="flex justify-between items-center mb-6 border-b pb-4">
+                <h2 class="text-2xl font-bold text-gray-800">
+                    <i class="fas fa-history mr-2 text-indigo-600"></i>Recent Transactions
+                </h2>
+                <a href="/payment" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-4 py-2 rounded-lg transition flex items-center">
+                    <i class="fas fa-rupee-sign mr-2"></i> View All Payments
+                </a>
+            </div>
+            
+            {% if transactions %}
+            <div class="overflow-x-auto rounded-lg border border-gray-300">
+                <table class="min-w-full bg-white">
+                    <thead class="bg-indigo-50">
+                        <tr>
+                            <th class="py-3 px-6 text-left font-semibold text-indigo-700 uppercase tracking-wider">Vehicle</th>
+                            <th class="py-3 px-6 text-left font-semibold text-indigo-700 uppercase tracking-wider">Distance</th>
+                            <th class="py-3 px-6 text-left font-semibold text-indigo-700 uppercase tracking-wider">Toll</th>
+                            <th class="py-3 px-6 text-left font-semibold text-indigo-700 uppercase tracking-wider">Fine</th>
+                            <th class="py-3 px-6 text-left font-semibold text-indigo-700 uppercase tracking-wider">Date/Time</th>
+                            <th class="py-3 px-6 text-left font-semibold text-indigo-700 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for transaction in transactions %}
+                        <tr class="hover:bg-indigo-50 transition">
+                            <td class="py-4 px-6 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-car text-blue-600"></i>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">{{ transaction.vehicle_type }}</div>
+                                        <div class="text-sm text-gray-500">{{ transaction.vehicle_id }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-4 px-6 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">{{ transaction.distance }} km</div>
+                            </td>
+                            <td class="py-4 px-6 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                    ₹{{ transaction.toll }}
+                                </span>
+                            </td>
+                            <td class="py-4 px-6 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {% if transaction.fine > 0 %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    ₹{{ transaction.fine }}
+                                </span>
+                            </td>
+                            <td class="py-4 px-6 whitespace-nowrap text-sm text-gray-500">
+                                {{ transaction.timestamp }}
+                            </td>
+                            <td class="py-4 px-6 whitespace-nowrap text-right text-sm font-medium">
+                                <a href="/receipt/{{ transaction.id }}" class="text-blue-600 hover:text-blue-900 mr-3">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="/receipt/{{ transaction.id }}?download=1" class="text-gray-600 hover:text-gray-900">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-8">
+                <div class="flex flex-col items-center justify-center text-gray-400">
+                    <i class="fas fa-car-crash text-4xl mb-2"></i>
+                    <p class="text-lg">No transactions recorded yet</p>
+                    <p class="text-sm mt-2">Start a simulation to record your first transaction</p>
+                </div>
+            </div>
+            {% endif %}
+        </section>
+    </main>
+
+    <!-- JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+    // Initialize variables
+    let map;
+    let startMarker;
+    let endMarker;
+    let vehicleMarker;
+    let routePolyline;
+    let tollMarkers = [];
+    let currentSimulationId = null;
+    let simulationInterval;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+    
+    // Initialize the map
+    function initMap() {
+    if (map) return;
+
+    // Initialize map with proper view
+    map = L.map('map', {
+        zoomControl: false,  // We'll add our own controls if needed
+        attributionControl: true
+    }).setView([18.735, 73.2816], 10);
+
+    // Add tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // Handle map resize when container becomes visible
+    setTimeout(() => {
+        map.invalidateSize();
+        // Fit bounds if we have markers
+        if (startMarker && endMarker) {
+            map.fitBounds([
+                [startMarker.getLatLng().lat, startMarker.getLatLng().lng],
+                [endMarker.getLatLng().lat, endMarker.getLatLng().lng]
+            ], {padding: [50, 50]});
+        }
+    }, 300);
+
+    // Hide loading spinner when map is ready
+    map.whenReady(function() {
+        document.getElementById('map-loading').style.display = 'none';
+    });
+}
+    
+    // Start simulation
+    function startSimulation() {
+        const vehicleId = '{{ vehicle.vehicle_id if vehicle else "" }}';
+        if (!vehicleId) {
+            alert('No vehicle registered. Please update your profile.');
+            return;
+        }
+        
+        // Disable button and show loading state
+        const startSimBtn = document.getElementById('start-simulation-btn');
+        startSimBtn.disabled = true;
+        startSimBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Starting...';
+        
+        // Show simulation section
+        document.getElementById('simulation-section').classList.remove('hidden');
+        
+        // Create form data with CSRF token
+        const formData = new FormData();
+        formData.append('vehicle_id', vehicleId);
+        formData.append('csrf_token', csrfToken);
+        
+        // Start simulation via AJAX with CSRF token
+        fetch('/start_simulation', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => { throw new Error(err.error || 'Failed to start simulation') });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            // Store current simulation ID
+            currentSimulationId = vehicleId;
+            
+            // Update simulation info
+            document.getElementById('sim-vehicle').textContent = '{{ vehicle.vehicle_name }}';
+            document.getElementById('sim-route').textContent = 
+                `${data.start_point.name || 'Start Point'} to ${data.end_plaza.name}`;
+            
+            // Load route coordinates and draw the route
+            fetch('/get_route_coordinates')
+                .then(response => response.json())
+                .then(routeCoords => {
+                    if (routeCoords.error) {
+                        console.warn(routeCoords.error);
+                        drawStraightRoute(data.start_point, data.end_plaza);
+                    } else {
+                        drawRouteWithCoordinates(data.start_point, data.end_plaza, routeCoords);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading route coordinates:', error);
+                    drawStraightRoute(data.start_point, data.end_plaza);
+                });
+            
+            // Start polling for simulation updates
+            pollSimulationStatus(vehicleId);
+            
+            // Reset button to "Simulating" state
+            startSimBtn.innerHTML = '<i class="fas fa-car mr-2"></i> Simulating...';
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert(`Simulation failed to start: ${error.message}`);
+            resetSimulationButton();
+        });
+    }
+    
+    // Draw route using actual coordinates
+    function drawRouteWithCoordinates(startPoint, endPlaza, routeCoordinates) {
+        // Clear existing markers and polyline
+        if (startMarker) map.removeLayer(startMarker);
+        if (endMarker) map.removeLayer(endMarker);
+        if (vehicleMarker) map.removeLayer(vehicleMarker);
+        if (routePolyline) map.removeLayer(routePolyline);
+        
+        // Create markers with custom icons
+        startMarker = L.marker([startPoint.latitude, startPoint.longitude], {
+            icon: L.divIcon({
+                className: 'start-marker',
+                html: '<i class="fas fa-flag fa-2x"></i>',
+                iconSize: [30, 30],
+                iconAnchor: [15, 30]
+            })
+        }).addTo(map).bindPopup("<b>Start Point</b><br>" + (startPoint.name || 'Starting location'));
+        
+        endMarker = L.marker([endPlaza.latitude, endPlaza.longitude], {
+            icon: L.divIcon({
+                className: 'end-marker',
+                html: '<i class="fas fa-flag-checkered fa-2x"></i>',
+                iconSize: [30, 30],
+                iconAnchor: [15, 30]
+            })
+        }).addTo(map).bindPopup("<b>Destination</b><br>" + endPlaza.name);
+        
+        // Find closest points on the route to start and end
+        const startIdx = findClosestRoutePoint([startPoint.latitude, startPoint.longitude], routeCoordinates);
+        const endIdx = findClosestRoutePoint([endPlaza.latitude, endPlaza.longitude], routeCoordinates);
+        
+        // Get the segment of the route we'll travel on
+        let routeSegment;
+        if (startIdx < endIdx) {
+            routeSegment = routeCoordinates.slice(startIdx, endIdx + 1);
+        } else {
+            routeSegment = routeCoordinates.slice(endIdx, startIdx + 1).reverse();
+        }
+        
+        // Convert to Leaflet format and create the polyline
+        const routePoints = routeSegment.map(coord => [coord.latitude, coord.longitude]);
+        
+        routePolyline = L.polyline(routePoints, {
+            color: '#10B981',
+            weight: 6,
+            dashArray: '10, 10'
+        }).addTo(map);
+        
+        // Fit the map to show both points with padding
+        map.fitBounds([
+            [startPoint.latitude, startPoint.longitude],
+            [endPlaza.latitude, endPlaza.longitude]
+        ], {padding: [50, 50]});
+        
+        // Add vehicle marker at start position
+        updateVehiclePosition(startPoint.latitude, startPoint.longitude);
+    }
+    
+    // Fallback to straight line route if coordinates not available
+    function drawStraightRoute(startPoint, endPlaza) {
+        // Clear existing markers and polyline
+        if (startMarker) map.removeLayer(startMarker);
+        if (endMarker) map.removeLayer(endMarker);
+        if (vehicleMarker) map.removeLayer(vehicleMarker);
+        if (routePolyline) map.removeLayer(routePolyline);
+        
+        // Create markers with custom icons
+        startMarker = L.marker([startPoint.latitude, startPoint.longitude], {
+            icon: L.divIcon({
+                className: 'start-marker',
+                html: '<i class="fas fa-flag fa-2x"></i>',
+                iconSize: [30, 30],
+                iconAnchor: [15, 30]
+            })
+        }).addTo(map).bindPopup("<b>Start Point</b><br>" + (startPoint.name || 'Starting location'));
+        
+        endMarker = L.marker([endPlaza.latitude, endPlaza.longitude], {
+            icon: L.divIcon({
+                className: 'end-marker',
+                html: '<i class="fas fa-flag-checkered fa-2x"></i>',
+                iconSize: [30, 30],
+                iconAnchor: [15, 30]
+            })
+        }).addTo(map).bindPopup("<b>Destination</b><br>" + endPlaza.name);
+        
+        // Create a straight line between points
+        routePolyline = L.polyline([
+            [startPoint.latitude, startPoint.longitude],
+            [endPlaza.latitude, endPlaza.longitude]
+        ], {
+            color: '#10B981',
+            weight: 6,
+            dashArray: '10, 10'
+        }).addTo(map);
+        
+        // Fit the map to show both points with padding
+        map.fitBounds([
+            [startPoint.latitude, startPoint.longitude],
+            [endPlaza.latitude, endPlaza.longitude]
+        ], {padding: [50, 50]});
+        
+        // Add vehicle marker at start position
+        updateVehiclePosition(startPoint.latitude, startPoint.longitude);
+    }
+    
+    // Find closest point on route to given coordinates
+    function findClosestRoutePoint(point, routeCoordinates) {
+        let closestIdx = 0;
+        let minDistance = Infinity;
+        
+        for (let i = 0; i < routeCoordinates.length; i++) {
+            const coord = routeCoordinates[i];
+            const dist = L.latLng(point).distanceTo(L.latLng([coord.latitude, coord.longitude]));
+            if (dist < minDistance) {
+                minDistance = dist;
+                closestIdx = i;
+            }
+        }
+        
+        return closestIdx;
+    }
+    
+    // Update vehicle position on map
+    function updateVehiclePosition(lat, lng) {
+        if (!vehicleMarker) {
+            vehicleMarker = L.marker([lat, lng], {
+                icon: L.divIcon({
+                    className: 'vehicle-marker',
+                    html: '<i class="fas fa-car fa-2x"></i>',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15]
+                }),
+                zIndexOffset: 1000
+            }).addTo(map).bindPopup("<b>Your Vehicle</b>");
+        } else {
+            vehicleMarker.setLatLng([lat, lng]);
+        }
+    }
+    
+    // Poll for simulation status updates
+    function pollSimulationStatus(vehicleId) {
+        clearInterval(simulationInterval);
+        
+        simulationInterval = setInterval(() => {
+            fetch(`/simulation_status/${vehicleId}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to get simulation status');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'error') {
+                    clearInterval(simulationInterval);
+                    alert(`Simulation error: ${data.error}`);
+                    resetSimulationButton();
+                    return;
+                }
+                
+                if (data.status === 'not_running') {
+                    clearInterval(simulationInterval);
+                    resetSimulationButton();
+                    return;
+                }
+                
+                // Update UI with simulation progress
+                updateSimulationUI(data);
+                
+                // Update vehicle position on map
+                if (data.current_position) {
+                    updateVehiclePosition(
+                        data.current_position.latitude, 
+                        data.current_position.longitude
+                    );
+                }
+                
+                // If simulation completed, stop polling and refresh
+                if (data.completed) {
+                    clearInterval(simulationInterval);
+                    setTimeout(() => {
+                        alert('Simulation completed successfully! Toll: ₹' + data.toll.toFixed(2));
+                        window.location.reload();
+                    }, 1000);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                clearInterval(simulationInterval);
+                resetSimulationButton();
+            });
+        }, 1000); // Poll every second
+    }
+    
+    // Update simulation UI elements
+    function updateSimulationUI(data) {
+        // Update progress bar
+        const progressBar = document.getElementById('simulation-progress');
+        const progressText = document.getElementById('progress-text');
+        if (progressBar && progressText) {
+            progressBar.style.width = `${data.progress}%`;
+            progressText.textContent = `${data.progress}% complete`;
+            
+            // Estimate time remaining (simple calculation)
+            const timeRemaining = document.getElementById('time-remaining');
+            if (timeRemaining) {
+                const minsLeft = Math.round((100 - data.progress) / 5); // Approx 5% per minute
+                timeRemaining.textContent = `~${minsLeft} mins remaining`;
+            }
+        }
+        
+        // Update stats
+        document.getElementById('sim-distance').textContent = 
+            `${data.distance_covered.toFixed(2)} / ${data.total_distance.toFixed(2)} km`;
+        document.getElementById('current-toll').textContent = `₹${data.toll.toFixed(2)}`;
+        document.getElementById('current-fine').textContent = `₹${data.fine.toFixed(2)}`;
+    }
+    
+    // Reset simulation button to initial state
+    function resetSimulationButton() {
+        const startSimBtn = document.getElementById('start-simulation-btn');
+        if (startSimBtn) {
+            startSimBtn.disabled = false;
+            startSimBtn.innerHTML = '<i class="fas fa-car mr-2"></i> Start Simulation';
+        }
+    }
+    
+    // Initialize the page
+    initMap();
+    
+    // Handle simulation form submission
+    document.getElementById('simulation-form')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        startSimulation();
+    });
+});
+    </script>
+</body>
+</html>

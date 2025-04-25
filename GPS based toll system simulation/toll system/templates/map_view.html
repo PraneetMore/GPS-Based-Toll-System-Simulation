@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Route - GPS Based Toll Collection</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map-container {
+            position: relative;
+            height: 500px;
+            width: 100%;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+            z-index: 0;
+        }
+        .leaflet-container {
+            background: #f8fafc;
+            font-family: inherit;
+        }
+        .leaflet-control-attribution {
+            font-size: 11px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 2px 5px;
+        }
+        .leaflet-popup-content-wrapper {
+            background: #fff;
+            border-radius: 0.5rem;
+            padding: 10px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .leaflet-popup-tip {
+            background: #fff;
+        }
+        .leaflet-div-icon {
+            background: transparent;
+            border: none;
+        }
+        .leaflet-div-icon i {
+            font-size: 24px;
+            text-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+        }
+        .start-marker i {
+            color: #10B981;
+        }
+        .end-marker i {
+            color: #EF4444;
+        }
+        .vehicle-marker i {
+            color: #3B82F6;
+        }
+        #map-legend {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation Bar -->
+    <nav class="bg-blue-600 p-4 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="text-white text-lg font-semibold flex items-center">
+                <i class="fas fa-map-marked-alt mr-2"></i>
+                GPS Based Toll Collection
+            </div>
+            <div class="space-x-4">
+                <a href="/dashboard" class="text-white hover:text-blue-200 transition">
+                    <i class="fas fa-tachometer-alt mr-1"></i> Dashboard
+                </a>
+                <a href="/profile" class="text-white hover:text-blue-200 transition">
+                    <i class="fas fa-user mr-1"></i> Profile
+                </a>
+                <a href="/logout" class="text-white hover:text-blue-200 transition">
+                    <i class="fas fa-sign-out-alt mr-1"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mx-auto py-8 px-4">
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-bold mb-4">Vehicle Route</h2>
+            
+            <div id="map-container">
+                <div id="map"></div>
+                <div id="map-legend">
+                    <div class="flex items-center mb-1">
+                        <i class="fas fa-flag text-green-500 mr-2"></i> Start Point
+                    </div>
+                    <div class="flex items-center mb-1">
+                        <i class="fas fa-flag-checkered text-red-500 mr-2"></i> Destination
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-road text-blue-500 mr-2"></i> Traveled Route
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <h3 class="font-semibold mb-2">Trip Information</h3>
+                    <p><span class="text-gray-600">Vehicle:</span> {{ vehicle.vehicle_name }}</p>
+                    <p><span class="text-gray-600">Type:</span> {{ vehicle.vehicle_type }}</p>
+                    <p><span class="text-gray-600">Distance:</span> {{ last_transaction.distance|round(2) if last_transaction else '0' }} km</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <h3 class="font-semibold mb-2">Payment Information</h3>
+                    <p><span class="text-gray-600">Toll:</span> ₹{{ last_transaction.toll|round(2) if last_transaction else '0' }}</p>
+                    <p><span class="text-gray-600">Fine:</span> ₹{{ last_transaction.fine|round(2) if last_transaction else '0' }}</p>
+                    <p><span class="text-gray-600">Total:</span> ₹{{ (last_transaction.toll + last_transaction.fine)|round(2) if last_transaction else '0' }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize map
+            const map = L.map('map').setView([18.735, 73.2816], 10);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            // Get data passed from Flask
+            const startPoint = {{ start_plaza|tojson }};
+            const endPoint = {{ end_plaza|tojson }};
+
+            // Add markers
+            const startMarker = L.marker([startPoint.latitude, startPoint.longitude], {
+                icon: L.divIcon({
+                    className: 'start-marker',
+                    html: '<i class="fas fa-flag fa-2x"></i>',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 30]
+                })
+            }).addTo(map).bindPopup("<b>Start Point</b>");
+
+            const endMarker = L.marker([endPoint.latitude, endPoint.longitude], {
+                icon: L.divIcon({
+                    className: 'end-marker',
+                    html: '<i class="fas fa-flag-checkered fa-2x"></i>',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 30]
+                })
+            }).addTo(map).bindPopup("<b>Destination</b>");
+
+            // Draw the blue route line between start and end points
+            const routePolyline = L.polyline([
+                [startPoint.latitude, startPoint.longitude],
+                [endPoint.latitude, endPoint.longitude]
+            ], {
+                color: '#3b82f6',
+                weight: 6
+            }).addTo(map);
+
+            // Fit bounds to show both points with padding
+            map.fitBounds([
+                [startPoint.latitude, startPoint.longitude],
+                [endPoint.latitude, endPoint.longitude]
+            ], {padding: [50, 50]});
+        });
+    </script>
+</body>
+</html>

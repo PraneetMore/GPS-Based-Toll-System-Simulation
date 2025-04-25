@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPS Based Toll Collection - Signup</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .form-input:focus {
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+            border-color: #3b82f6;
+        }
+        .vehicle-select {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+        }
+        .flash-message {
+            animation: fadeOut 5s forwards;
+        }
+        @keyframes fadeOut {
+            0% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { opacity: 0; display: none; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+    <!-- Navigation Bar -->
+    <nav class="bg-gray-800 p-4 shadow-lg">
+        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
+            <div class="text-white text-xl font-bold flex items-center mb-4 md:mb-0">
+                <i class="fas fa-road mr-2 text-blue-300"></i>
+                GPS Toll System
+            </div>
+            <div class="flex flex-wrap justify-center gap-4 md:gap-6">
+                <a href="{{ url_for('status') }}" class="text-white hover:text-blue-300 transition">
+                    <i class="fas fa-chart-line mr-1"></i> Status
+                </a>
+                <a href="{{ url_for('about') }}" class="text-white hover:text-blue-300 transition duration-200">
+                    <i class="fas fa-info-circle mr-1"></i> About
+                </a>
+                <a href="{{ url_for('admin_login') }}" class="text-white hover:text-blue-300 transition duration-200">
+                    <i class="fas fa-user-shield mr-1"></i> Admin
+                </a>
+                <a href="{{ url_for('login') }}" class="text-white hover:text-blue-300 transition duration-200">
+                    <i class="fas fa-sign-in-alt mr-1"></i> Login
+                </a>
+                <a href="{{ url_for('signup') }}" class="text-white font-semibold hover:text-blue-300 transition duration-200">
+                    <i class="fas fa-user-plus mr-1"></i> Sign Up
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="container mx-auto px-4 mt-4">
+                {% for category, message in messages %}
+                    <div class="flash-message bg-{% if category == 'error' %}red-500{% else %}green-500{% endif %} text-white px-4 py-3 rounded relative" role="alert">
+                        <span class="block sm:inline">{{ message }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Page Header -->
+    <header class="bg-gradient-to-r from-blue-600 to-blue-800 text-white text-center py-12 shadow-md">
+        <div class="container mx-auto px-4">
+            <h1 class="text-4xl md:text-5xl font-bold mb-4">Create Your Account</h1>
+            <p class="text-lg md:text-xl max-w-2xl mx-auto">
+                Register your vehicle for seamless GPS-based toll collection
+            </p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow container mx-auto py-8 px-4">
+        <section class="bg-white p-8 rounded-xl shadow-lg max-w-md mx-auto border border-gray-200">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-user-plus text-3xl text-blue-600"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800">Vehicle Registration</h2>
+                <p class="text-gray-600 mt-2">Fill in your details to get started</p>
+            </div>
+
+            <form method="POST" action="{{ url_for('signup') }}" class="space-y-5">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-user mr-1 text-blue-500"></i> Username
+                    </label>
+                    <input type="text" id="username" name="username" required
+                        class="form-input w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none transition duration-200"
+                        placeholder="Enter your username"
+                        value="{{ request.form.username if request.form.username }}">
+                    {% if 'username' in form_errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form_errors.username }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-lock mr-1 text-blue-500"></i> Password
+                    </label>
+                    <input type="password" id="password" name="password" required minlength="8"
+                        class="form-input w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none transition duration-200"
+                        placeholder="Create a password">
+                    <p class="text-xs text-gray-500 mt-1">Minimum 8 characters</p>
+                    {% if 'password' in form_errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form_errors.password }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="vehicle_id" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-car mr-1 text-blue-500"></i> Vehicle ID
+                    </label>
+                    <input type="text" id="vehicle_id" name="vehicle_id" required
+                        class="form-input w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none transition duration-200"
+                        placeholder="e.g. MH01AB1234"
+                        value="{{ request.form.vehicle_id if request.form.vehicle_id }}">
+                    {% if 'vehicle_id' in form_errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form_errors.vehicle_id }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="vehicle_name" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-tag mr-1 text-blue-500"></i> Vehicle Name
+                    </label>
+                    <input type="text" id="vehicle_name" name="vehicle_name" required
+                        class="form-input w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none transition duration-200"
+                        placeholder="e.g. Honda City"
+                        value="{{ request.form.vehicle_name if request.form.vehicle_name }}">
+                    {% if 'vehicle_name' in form_errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form_errors.vehicle_name }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="vehicle_type" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-truck-pickup mr-1 text-blue-500"></i> Vehicle Type
+                    </label>
+                    <select id="vehicle_type" name="vehicle_type" required
+                        class="vehicle-select form-input w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none transition duration-200 appearance-none">
+                        <option value="" disabled selected>Select vehicle type</option>
+                        <option value="Cars and Jeeps" {% if request.form.vehicle_type == 'Cars and Jeeps' %}selected{% endif %}>Cars and Jeeps</option>
+                        <option value="Minibuses and Tempos" {% if request.form.vehicle_type == 'Minibuses and Tempos' %}selected{% endif %}>Minibuses and Tempos</option>
+                        <option value="Two-Axle Trucks" {% if request.form.vehicle_type == 'Two-Axle Trucks' %}selected{% endif %}>Two-Axle Trucks</option>
+                        <option value="Buses" {% if request.form.vehicle_type == 'Buses' %}selected{% endif %}>Buses</option>
+                        <option value="Three-Axle Trucks" {% if request.form.vehicle_type == 'Three-Axle Trucks' %}selected{% endif %}>Three-Axle Trucks</option>
+                        <option value="Multi-Axle Trucks and Machinery Vehicles" {% if request.form.vehicle_type == 'Multi-Axle Trucks and Machinery Vehicles' %}selected{% endif %}>Multi-Axle Trucks and Machinery Vehicles</option>
+                    </select>
+                    {% if 'vehicle_type' in form_errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form_errors.vehicle_type }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" 
+                        class="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-200 flex items-center justify-center">
+                        <i class="fas fa-user-plus mr-2"></i> Create Account
+                    </button>
+                </div>
+
+                <div class="text-center text-sm text-gray-600 pt-2">
+                    Already registered? 
+                    <a href="{{ url_for('login') }}" class="text-blue-600 hover:text-blue-800 font-medium transition duration-200">
+                        Sign in here
+                    </a>
+                </div>
+            </form>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-6 mt-8">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0 text-center md:text-left">
+                    <h3 class="text-lg font-semibold">GPS Based Toll Collection</h3>
+                    <p class="text-gray-400 text-sm">Innovating transportation infrastructure</p>
+                </div>
+                <div class="flex space-x-4">
+                    <a href="#" class="text-gray-400 hover:text-white transition duration-200">
+                        <i class="fab fa-twitter text-xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white transition duration-200">
+                        <i class="fab fa-facebook text-xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white transition duration-200">
+                        <i class="fab fa-linkedin text-xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white transition duration-200">
+                        <i class="fas fa-envelope text-xl"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-4 pt-4 text-center text-gray-400 text-sm">
+                <p>© 2025 GPS Based Toll Collection System. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Auto-dismiss flash messages after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            const flashMessages = document.querySelectorAll('.flash-message');
+            flashMessages.forEach(message => {
+                setTimeout(() => {
+                    message.style.display = 'none';
+                }, 5000);
+            });
+        });
+    </script>
+</body>
+</html>
+<script src="script.js"></script>

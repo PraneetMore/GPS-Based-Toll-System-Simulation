@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment - GPS Based Toll Collection</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .transaction-row:hover {
+            background-color: #f8fafc;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Navigation Bar -->
+    <nav class="bg-gray-800 p-4 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="text-white text-lg font-semibold flex items-center">
+                <i class="fas fa-credit-card mr-2"></i>
+                GPS Based Toll Collection
+            </div>
+            <div class="space-x-4">
+                <a href="/dashboard" class="text-white hover:text-blue-300 transition">
+                    <i class="fas fa-tachometer-alt mr-1"></i> Dashboard
+                </a>
+                <a href="/profile" class="text-white hover:text-blue-300 transition">
+                    <i class="fas fa-user mr-1"></i> Profile
+                </a>
+                <a href="/logout" class="text-white hover:text-blue-300 transition">
+                    <i class="fas fa-sign-out-alt mr-1"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <header class="bg-blue-600 text-white text-center py-8 shadow-lg">
+        <div class="container mx-auto">
+            <h1 class="text-4xl font-bold mb-2">Payment History</h1>
+            <p class="text-xl">View your toll payment transactions</p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto py-8 px-4">
+        <!-- Payment Summary -->
+        <section class="bg-white p-6 rounded-lg shadow-md mb-8">
+            <h2 class="text-xl font-bold mb-6 text-gray-800 border-b pb-2">Transaction Summary</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="bg-blue-50 p-5 rounded-lg border border-blue-100">
+                    <h3 class="text-lg font-semibold text-blue-800 mb-3">Total Amount</h3>
+                    <p class="text-3xl font-bold text-blue-600">₹{{ total_amount|round(2) }}</p>
+                </div>
+                
+                <div class="bg-green-50 p-5 rounded-lg border border-green-100">
+                    <h3 class="text-lg font-semibold text-green-800 mb-3">Total Toll Charges</h3>
+                    <p class="text-2xl font-bold text-green-600">₹{{ total_toll|round(2) }}</p>
+                </div>
+                
+                <div class="bg-red-50 p-5 rounded-lg border border-red-100">
+                    <h3 class="text-lg font-semibold text-red-800 mb-3">Total Fines</h3>
+                    <p class="text-2xl font-bold text-red-600">₹{{ total_fine|round(2) }}</p>
+                </div>
+            </div>
+
+            <!-- Payment Form -->
+            <form method="POST" action="/process_payment" class="mt-6">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                
+                <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                    <h3 class="text-lg font-semibold mb-4">Payment Method</h3>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Card Number</label>
+                            <input type="text" name="card_number" class="w-full px-4 py-2 rounded-lg border border-gray-300" 
+                                   placeholder="1234 5678 9012 3456" required>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+                                <input type="text" name="expiry" class="w-full px-4 py-2 rounded-lg border border-gray-300" 
+                                       placeholder="MM/YY" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">CVV</label>
+                                <input type="text" name="cvv" class="w-full px-4 py-2 rounded-lg border border-gray-300" 
+                                       placeholder="123" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg mt-6">
+                        Pay ₹{{ total_amount|round(2) }}
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Transaction History -->
+        <section class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-bold mb-6 text-gray-800 border-b pb-2">Transaction History</h2>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white rounded-lg overflow-hidden">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="py-3 px-4 text-left font-semibold text-gray-700">Date & Time</th>
+                            <th class="py-3 px-4 text-left font-semibold text-gray-700">Vehicle ID</th>
+                            <th class="py-3 px-4 text-left font-semibold text-gray-700">Vehicle Type</th>
+                            <th class="py-3 px-4 text-left font-semibold text-gray-700">Distance (km)</th>
+                            <th class="py-3 px-4 text-left font-semibold text-gray-700">Toll (₹)</th>
+                            <th class="py-3 px-4 text-left font-semibold text-gray-700">Fine (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for transaction in transactions %}
+                        <tr class="transaction-row">
+                            <td class="py-3 px-4">{{ transaction.timestamp }}</td>
+                            <td class="py-3 px-4">{{ transaction.vehicle_id }}</td>
+                            <td class="py-3 px-4">{{ transaction.vehicle_type }}</td>
+                            <td class="py-3 px-4">{{ transaction.distance|round(2) }}</td>
+                            <td class="py-3 px-4">{{ transaction.toll|round(2) }}</td>
+                            <td class="py-3 px-4">{{ transaction.fine|round(2) }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="py-4 px-4 text-center text-gray-500">No transactions found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="fixed bottom-4 right-4 space-y-2">
+                {% for category, message in messages %}
+                    <div class="bg-{% if category == 'success' %}green{% else %}red{% endif %}-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center">
+                        <i class="fas fa-{% if category == 'success' %}check-circle{% else %}exclamation-circle{% endif %} mr-2"></i>
+                        <span>{{ message }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- JavaScript -->
+    <script>
+        // Auto-hide flash messages after 5 seconds
+        const flashMessages = document.querySelectorAll('.fixed div');
+        if (flashMessages.length > 0) {
+            setTimeout(() => {
+                flashMessages.forEach(msg => {
+                    msg.style.opacity = '0';
+                    setTimeout(() => msg.remove(), 300);
+                });
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
