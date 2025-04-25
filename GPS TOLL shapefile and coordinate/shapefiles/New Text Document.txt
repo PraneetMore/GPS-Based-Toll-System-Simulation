@@ -1,0 +1,10 @@
+import geopandas as gpd
+
+# Load the shapefile
+road_network = gpd.read_file("mumbai_pune_road_network.shp")
+
+# Convert to CSV
+road_network.to_csv("road_network.csv", index=False)
+
+# Display first few rows
+print(road_network.head())
