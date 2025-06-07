@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 import json
 
 app = Flask(__name__)
-app.secret_key = 'cbc9d3dadc84ae82b9670bf1148beda7' 
+app.secret_key = 'your_api_key' 
 csrf = CSRFProtect(app)
 
 # Configure logging
